@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dosya Yükleme Arayüzü</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .upload-container {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            background-color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .upload-icon {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        #file-input {
+            display: none;
+        }
+        #status {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        #result-link {
+            color: blue;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <div id="drop-zone" class="upload-container">
+            <div class="upload-icon">&#x2B;</div>
+            <p>Dosyaları seçin veya sürükleyin.</p>
+            <input type="file" id="file-input" multiple accept="image/*">
+        </div>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const status = document.getElementById('status');
+
+        dropZone.addEventListener('click', (e) => {
+            if (e.target !== fileInput) {
+                fileInput.click();
+            }
+        });
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = '#000';
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.style.borderColor = '#ccc';
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = '#ccc';
+            handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        function handleFiles(files) {
+            Array.from(files).forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    uploadFile(file);
+                } else {
+                    status.textContent = 'Lütfen sadece resim dosyaları yükleyin.';
+                }
+            });
+        }
+
+        function uploadFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const fileData = e.target.result.split(',')[1]; // Base64 data
+                status.textContent = 'Yükleniyor...';
+                
+                google.script.run
+                    .withSuccessHandler(onSuccess)
+                    .withFailureHandler(onFailure)
+                    .uploadImageToTelegraph(fileData, file.name, file.type);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function onSuccess(result) {
+            if (result && result.link) {
+                status.innerHTML = 'Yükleme başarılı. Bağlantı: <a id="result-link" href="' + result.link + '" target="_blank">' + result.link + '</a>';
+            } else {
+                status.textContent = 'Yükleme tamamlandı, ancak bağlantı alınamadı.';
+            }
+        }
+
+        function onFailure(error) {
+            status.textContent = 'Hata oluştu: ' + error.message;
+            console.error('Hata:', error);
+        }
+    </script>
+</body>
+</html>
