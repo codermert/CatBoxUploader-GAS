@@ -11,9 +11,14 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
             background-color: #f0f0f0;
+        }
+        .container {
+            width: 100%;
+            max-width: 600px;
+            padding: 20px;
         }
         .upload-container {
             border: 2px dashed #ccc;
@@ -22,6 +27,7 @@
             background-color: white;
             border-radius: 5px;
             cursor: pointer;
+            margin-bottom: 20px;
         }
         .upload-icon {
             font-size: 24px;
@@ -32,9 +38,11 @@
         }
         #status {
             margin-top: 20px;
-            font-weight: bold;
         }
-        #result-link {
+        .result-item {
+            margin-bottom: 10px;
+        }
+        .result-link {
             color: blue;
             text-decoration: underline;
             cursor: pointer;
@@ -42,7 +50,7 @@
     </style>
 </head>
 <body>
-    <div>
+    <div class="container">
         <div id="drop-zone" class="upload-container">
             <div class="upload-icon">&#x2B;</div>
             <p>Dosyaları seçin veya sürükleyin.</p>
@@ -50,7 +58,7 @@
         </div>
         <div id="status"></div>
     </div>
-
+    
     <script>
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('file-input');
@@ -82,11 +90,12 @@
         });
 
         function handleFiles(files) {
+            status.innerHTML = '';
             Array.from(files).forEach(file => {
                 if (file.type.startsWith('image/')) {
                     uploadFile(file);
                 } else {
-                    status.textContent = 'Lütfen sadece resim dosyaları yükleyin.';
+                    status.innerHTML += `<p>Hata: "${file.name}" bir resim dosyası değil.</p>`;
                 }
             });
         }
@@ -95,26 +104,28 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 const fileData = e.target.result.split(',')[1]; // Base64 data
-                status.textContent = 'Yükleniyor...';
+                const statusItem = document.createElement('p');
+                statusItem.textContent = `${file.name} yükleniyor...`;
+                status.appendChild(statusItem);
                 
                 google.script.run
-                    .withSuccessHandler(onSuccess)
-                    .withFailureHandler(onFailure)
+                    .withSuccessHandler((result) => onSuccess(result, statusItem, file.name))
+                    .withFailureHandler((error) => onFailure(error, statusItem, file.name))
                     .uploadImageToTelegraph(fileData, file.name, file.type);
             };
             reader.readAsDataURL(file);
         }
 
-        function onSuccess(result) {
+        function onSuccess(result, statusItem, fileName) {
             if (result && result.link) {
-                status.innerHTML = 'Yükleme başarılı. Bağlantı: <a id="result-link" href="' + result.link + '" target="_blank">' + result.link + '</a>';
+                statusItem.innerHTML = `"${fileName}" yüklendi. Bağlantı: <a class="result-link" href="${result.link}" target="_blank">${result.link}</a>`;
             } else {
-                status.textContent = 'Yükleme tamamlandı, ancak bağlantı alınamadı.';
+                statusItem.textContent = `"${fileName}" yüklendi, ancak bağlantı alınamadı.`;
             }
         }
 
-        function onFailure(error) {
-            status.textContent = 'Hata oluştu: ' + error.message;
+        function onFailure(error, statusItem, fileName) {
+            statusItem.textContent = `"${fileName}" yüklenirken hata oluştu: ${error.message}`;
             console.error('Hata:', error);
         }
     </script>
