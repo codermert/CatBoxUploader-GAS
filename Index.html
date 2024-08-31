@@ -53,7 +53,7 @@
     <div class="container">
         <div id="drop-zone" class="upload-container">
             <div class="upload-icon">&#x2B;</div>
-            <p>Dosyaları seçin veya sürükleyin.</p>
+            <p>Dosyaları seçin, sürükleyin veya yapıştırın.</p>
             <input type="file" id="file-input" multiple accept="image/*">
         </div>
         <div id="status"></div>
@@ -87,6 +87,17 @@
 
         fileInput.addEventListener('change', (e) => {
             handleFiles(e.target.files);
+        });
+
+        // Yapıştırma olayını dinle
+        document.addEventListener('paste', (e) => {
+            const items = e.clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    const blob = items[i].getAsFile();
+                    handleFiles([blob]);
+                }
+            }
         });
 
         function handleFiles(files) {
